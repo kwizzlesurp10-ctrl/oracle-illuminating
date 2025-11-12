@@ -18,7 +18,7 @@ Oracle Illuminating is an experimental agentic AI system that implements the **O
 ### Core Components
 
 1. **Oracle Framework**
-   - Multiple insight oracles (dataset, interpret, adapt)
+   - Multiple insight oracles (dataset, interpret, adapt, vulnerability)
    - Acuity scoring system (0.0-1.0)
    - Pattern recognition engine
    - Outcome classification
@@ -51,6 +51,13 @@ Oracle Illuminating is an experimental agentic AI system that implements the **O
 - **Self-Auditing**: Continuous equilibrium monitoring
 - **Recursive Evolution**: Each cycle generates new research questions
 
+### Default Oracles
+
+- `dataset`: Evaluates quantitative signals, detects trends/anomalies, and exposes statistical context.
+- `interpret`: Weighs incoming signals to validate or challenge hypotheses and quantify evidence gaps.
+- `adapt`: Generates prioritized action paths that respect constraints, risk posture, and guardrail status.
+- `vulnerability`: Illuminates exposure vectors and guardrail coverage to surface mitigation priorities.
+
 ## Use Cases
 
 - Adaptive AI research and development
@@ -63,13 +70,108 @@ Oracle Illuminating is an experimental agentic AI system that implements the **O
 
 ```
 oracle-illuminating/
-├── README.md           # This file
-├── LICENSE            # MIT License
-├── .gitignore         # Python gitignore
-├── src/               # Source code (coming soon)
-├── examples/          # Example implementations
-├── docs/              # Extended documentation
-└── tests/             # Test suite
+├── README.md
+├── LICENSE
+├── pyproject.toml
+├── src/
+│   └── oracle_illuminating/
+│       ├── __init__.py
+│       ├── analytics/
+│       │   ├── __init__.py
+│       │   ├── database.py
+│       │   ├── models.py
+│       │   └── repository.py
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── agentic_layer.py
+│       │   ├── guardrails.py
+│       │   └── oracle_framework.py
+│       ├── service/
+│           ├── __init__.py
+│           ├── app.py
+│           ├── models.py
+│           ├── oracles.py
+│           ├── routes.py
+│           └── analytics_routes.py
+│       └── workflows/
+│           ├── __init__.py
+│           └── illumination_flow.py
+└── tests/
+    ├── test_illuminate_endpoint.py
+    └── test_illumination_flow.py
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or higher
+
+### Installation
+
+1. Create and activate a virtual environment:
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pip install --upgrade pip
+   pip install -e ".[dev]"
+   ```
+
+### Running the Service
+
+Start the FastAPI application with Uvicorn:
+
+```bash
+uvicorn oracle_illuminating.service.app:app --reload
+```
+
+The interactive docs will be available at `http://127.0.0.1:8000/docs`.
+
+### Analytics API
+
+Collect illumination runs and retrieve analytics for downstream dashboards or data pipelines:
+
+- `POST /api/illuminate` — executes a run and persists the insights/guardrails for aggregation.
+- `GET /api/analytics/summary` — returns oracle acuity averages, guardrail status distribution, and recent run snapshots.
+
+Set `ORACLE_ILLUMINATING_DB_URL` to point at your preferred database (defaults to a local SQLite file `oracle_data.db`).
+
+### Running a Workflow Cycle
+
+Execute a single illumination cycle through the Prefect-backed CLI. Provide either an inline JSON string or a path to a JSON file:
+
+```bash
+oracle-illuminate cycle --payload '{"summary": "pulse pattern", "hypothesis": "signal drift"}'
+```
+
+### Aggregating Analytics via CLI
+
+Retrieve persisted analytics summaries without hitting the API:
+
+```bash
+oracle-illuminate analytics --limit 5
+```
+
+### Orchestrating with Prefect
+
+The built-in Prefect flow (`oracle_illuminating.workflows.illumination_cycle`) can be scheduled or extended within your own Prefect deployment. When invoked programmatically, it returns the boosted insights, guardrail audit results, and a recursive follow-up question:
+
+```python
+from oracle_illuminating.workflows import illumination_cycle
+
+result = illumination_cycle({"summary": "immersion data"})
+```
+
+### Running Tests
+
+```bash
+pytest
 ```
 
 ## Roadmap
