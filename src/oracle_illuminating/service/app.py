@@ -6,8 +6,10 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from oracle_illuminating.service.routes import router as illumination_router
 from oracle_illuminating.service.analytics_routes import router as analytics_router
+from oracle_illuminating.service.realtime_routes import router as realtime_router
+from oracle_illuminating.service.routes import router as illumination_router
+from oracle_illuminating.service.subscription_routes import router as subscription_router
 
 
 def create_app() -> FastAPI:
@@ -18,6 +20,8 @@ def create_app() -> FastAPI:
     )
     app.include_router(illumination_router, prefix="/api")
     app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+    app.include_router(realtime_router, prefix="/api/realtime")
+    app.include_router(subscription_router, prefix="/api/subscriptions")
     return app
 
 
