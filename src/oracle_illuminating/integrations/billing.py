@@ -86,10 +86,40 @@ class BillingProvider:
         if not signature:
             raise BillingError("Missing webhook signature header")
 
-        digest = hmac.new(self._webhook_secret.encode(), payload, sha256).hexdigest()
+        secret = self._webhook_secret.encode()
+
+        try:
+            decoded_body = payload.decode()
+        except UnicodeDecodeError as exc:
+            raise BillingError("Webhook payload must be UTF-8 encoded") from exc
+
+        def load_json() -> Dict[str, Any]:
+            try:
+                return json.loads(decoded_body)
+            except json.JSONDecodeError as exc:
+                raise BillingError("Webhook payload is not valid JSON") from exc
+
+        # Stripe sends comma-delimited key/value pairs that include a timestamp and signature.
+        if "v1=" in signature:
+            components: Dict[str, str] = {}
+            for item in signature.split(","):
+                if "=" in item:
+                    key, value = item.split("=", 1)
+                    components[key.strip()] = value.strip()
+            timestamp = components.get("t")
+            v1_signature = components.get("v1")
+            if not timestamp or not v1_signature:
+                raise BillingError("Invalid Stripe signature header")
+            signed_payload = f"{timestamp}.{decoded_body}".encode()
+            expected = hmac.new(secret, signed_payload, sha256).hexdigest()
+            if not hmac.compare_digest(expected, v1_signature):
+                raise BillingError("Invalid webhook signature")
+            return load_json()
+
+        digest = hmac.new(secret, payload, sha256).hexdigest()
         if not hmac.compare_digest(digest, signature):
             raise BillingError("Invalid webhook signature")
-        return json.loads(payload.decode())
+        return load_json()
 
     async def _create_stripe_session(
         self,
@@ -144,9 +174,12 @@ class BillingProvider:
                     "Authorization": f"Basic {auth}",
                 },
                 json={
-                    "query": "mutation CreateClientToken { "
-                    "createClientToken(clientTokenInput: { merchantAccountId: "
-                    f'"{merchant_id}" }) {{ clientToken }} }}'
+                    "query": (
+                        "mutation CreateClientToken { "
+                        "createClientToken(clientTokenInput: { merchantAccountId: "
+                        '"%s" }) { clientToken } }'
+                    )
+                    % merchant_id
                 },
             )
         if response.status_code >= 400:

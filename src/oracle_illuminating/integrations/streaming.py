@@ -52,8 +52,12 @@ class KafkaStreamIngestor:
 
     async def start_ingest(self, topic: str, sink: str = "duckdb") -> StreamingStatus:
         async with self._lock:
-            if topic in self._jobs:
-                return self._jobs[topic].status
+            existing = self._jobs.get(topic)
+            if existing:
+                if existing.status.running:
+                    return existing.status
+                # Clean up completed job so a fresh ingest can start.
+                self._jobs.pop(topic, None)
 
             if AIOKafkaConsumer and self._bootstrap_servers:
                 task = asyncio.create_task(self._consume_kafka(topic, sink))
@@ -74,13 +78,17 @@ class KafkaStreamIngestor:
             job = self._jobs.get(topic)
             if not job:
                 raise ValueError(f"No ingest job for topic '{topic}'")
-            job.task.cancel()
-            try:
-                await job.task
-            except asyncio.CancelledError:
-                pass
+            task = job.task
             job.status.running = False
-            return job.status
+            status = job.status
+            self._jobs.pop(topic, None)
+
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        return status
 
     async def get_status(self, topic: str) -> StreamingStatus:
         async with self._lock:
