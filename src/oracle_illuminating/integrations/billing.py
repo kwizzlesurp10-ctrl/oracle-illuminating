@@ -144,9 +144,12 @@ class BillingProvider:
                     "Authorization": f"Basic {auth}",
                 },
                 json={
-                    "query": "mutation CreateClientToken { "
-                    "createClientToken(clientTokenInput: { merchantAccountId: "
-                    f'"{merchant_id}" }) {{ clientToken }} }}'
+                    "query": (
+                        "mutation CreateClientToken { "
+                        "createClientToken(clientTokenInput: { merchantAccountId: "
+                        f'"{merchant_id}"'
+                        " }) { clientToken } }"
+                    )
                 },
             )
         if response.status_code >= 400:
